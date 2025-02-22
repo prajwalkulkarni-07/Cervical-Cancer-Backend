@@ -14,8 +14,8 @@ run_with_ngrok(app)  # This will start ngrok when you run the app
 logging.basicConfig(level=logging.INFO)
 
 # Model path (ensure your model is accessible or upload it to Colab)
-MODEL_PATH = "/content/drive/MyDrive/Cervical Cancer Website/Ensemble.h5"
-UPLOAD_FOLDER = "/content/drive/MyDrive/Cervical Cancer Website/uploads"
+MODEL_PATH = "https://drive.google.com/file/d/1w60Z7vMYKSqWhJZQefF8ZqXs6Cv3z90p/view?usp=sharing"
+UPLOAD_FOLDER = "https://drive.google.com/drive/folders/1koX52Mdlrb0DpeeJviphNPZzatfQC_id?usp=sharing"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
