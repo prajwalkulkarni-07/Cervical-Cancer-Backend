@@ -17,6 +17,7 @@ url = "https://drive.google.com/uc?id=1w60Z7vMYKSqWhJZQefF8ZqXs6Cv3z90p"
 output = "model.h5"
 gdown.download(url, output, quiet=False)
 model = "./model.h5"
+MODEL_PATH = "./model.h5"
 
 # Define class labels
 CLASS_LABELS = [
