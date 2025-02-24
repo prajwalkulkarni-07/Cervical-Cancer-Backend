@@ -13,11 +13,11 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 
 # Model path (Make sure this is the actual path to the .h5 file on your system)
-url = "https://drive.google.com/uc?id=1w60Z7vMYKSqWhJZQefF8ZqXs6Cv3z90p"
-output = "model.h5"
-gdown.download(url, output, quiet=False)
-model = "./model.h5"
-MODEL_PATH = "./model.h5"
+# url = "https://drive.google.com/uc?id=1w60Z7vMYKSqWhJZQefF8ZqXs6Cv3z90p"
+# output = "model.h5"
+# gdown.download(url, output, quiet=False)
+model = "./model/end.h5"
+MODEL_PATH = "./model/end.h5"
 
 # Define class labels
 CLASS_LABELS = [
