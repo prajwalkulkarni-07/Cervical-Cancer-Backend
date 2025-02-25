@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import tensorflow as tf
 import numpy as np
 from PIL import Image
@@ -8,16 +9,13 @@ import gdown
 
 # Initialize Flask app
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 
-# Model path (Make sure this is the actual path to the .h5 file on your system)
-# url = "https://drive.google.com/uc?id=1w60Z7vMYKSqWhJZQefF8ZqXs6Cv3z90p"
-# output = "model.h5"
-# gdown.download(url, output, quiet=False)
-model = "./model/end.h5"
-MODEL_PATH = "./model/end.h5"
+# Model path
+MODEL_PATH = "model.h5"
 
 # Define class labels
 CLASS_LABELS = [
@@ -42,9 +40,23 @@ def allowed_file(filename):
     """Check if the uploaded file has a valid extension."""
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def download_model_if_needed():
+    """Download the model if it doesn't exist locally."""
+    if not os.path.exists(MODEL_PATH):
+        logging.info("Downloading model from Google Drive...")
+        url = "https://drive.google.com/uc?id=1w60Z7vMYKSqWhJZQefF8ZqXs6Cv3z90p"
+        gdown.download(url, MODEL_PATH, quiet=False)
+        logging.info("Model downloaded successfully!")
+    else:
+        logging.info("Model already exists locally.")
+
 def load_model():
     """Load the trained TensorFlow model."""
     try:
+        # Ensure the model is downloaded
+        download_model_if_needed()
+        
+        # Load the model
         model = tf.keras.models.load_model(MODEL_PATH, compile=False)
         logging.info("✅ Model loaded successfully!")
         return model
@@ -52,6 +64,7 @@ def load_model():
         logging.error(f"❌ Error loading model: {e}")
         return None
 
+# Load model at startup
 model = load_model()
 
 def preprocess_image(image_path):
@@ -91,13 +104,21 @@ def predict():
         class_index = np.argmax(predictions)
         predicted_class = CLASS_LABELS[class_index]
         confidence = float(predictions[class_index])
+        
+        # Optional: Return all class probabilities
+        all_probabilities = {CLASS_LABELS[i]: float(predictions[i]) for i in range(len(CLASS_LABELS))}
     else:
         return jsonify({"error": "Model not loaded properly"}), 500
 
     # Clean up (remove uploaded image)
     os.remove(filepath)
 
-    return jsonify({"result": predicted_class, "confidence": confidence})
+    return jsonify({
+        "result": predicted_class, 
+        "confidence": confidence,
+        "all_probabilities": all_probabilities
+    })
 
+# If you want to run this directly for testing
 if __name__ == "__main__":
-    app.run()
+    app.run(host="0.0.0.0", port=5000, debug=False)
