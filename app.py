@@ -15,7 +15,8 @@ CORS(app)  # Enable CORS for all routes
 logging.basicConfig(level=logging.INFO)
 
 # Model path
-MODEL_PATH = "model.h5"
+MODEL_PATH = "./model/end.h5"
+MODEL_DIR = os.path.dirname(MODEL_PATH)
 
 # Define class labels
 CLASS_LABELS = [
@@ -31,7 +32,8 @@ CLASS_LABELS = [
 # Allowed file extensions
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
 
-# Create a temp upload directory
+# Create directories
+os.makedirs(MODEL_DIR, exist_ok=True)
 UPLOAD_FOLDER = "temp_uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
@@ -79,6 +81,14 @@ def preprocess_image(image_path):
         logging.error(f"❌ Error preprocessing image: {e}")
         return None
 
+@app.route("/", methods=["GET"])
+def index():
+    """Root endpoint to confirm API is running."""
+    return jsonify({
+        "status": "online",
+        "message": "ML Model API is running. POST an image to /predict to classify it."
+    })
+
 @app.route("/predict", methods=["POST"])
 def predict():
     """Receive an image and return a prediction."""
@@ -119,6 +129,8 @@ def predict():
         "all_probabilities": all_probabilities
     })
 
-# If you want to run this directly for testing
+# This is important for Render
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    # Use the PORT environment variable provided by Render
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
