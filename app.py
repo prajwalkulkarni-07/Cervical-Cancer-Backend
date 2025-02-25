@@ -83,7 +83,7 @@ def predict_with_model(img_array):
 #         "message": "ML Model API is running. POST an image to /predict to classify it."
 #     })
 
-@app.route("/", methods=["POST"])
+@app.route("/", methods=["GET"])
 def predict():
     """Receive an image and return a prediction."""
     if "image" not in request.files:
