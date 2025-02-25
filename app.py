@@ -5,7 +5,6 @@ import numpy as np
 from PIL import Image
 import os
 import logging
-import gdown
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -16,9 +15,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Model paths
-MODEL_DIR = "./model"
-MODEL_PATH = os.path.join(MODEL_DIR, "end.h5")
-TFLITE_PATH = os.path.join(MODEL_DIR, "end.tflite")
+MODEL_PATH = "./model/end.h5"
 
 # Define class labels
 CLASS_LABELS = [
@@ -35,7 +32,6 @@ CLASS_LABELS = [
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
 
 # Create directories
-os.makedirs(MODEL_DIR, exist_ok=True)
 UPLOAD_FOLDER = "temp_uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
@@ -44,68 +40,18 @@ def allowed_file(filename):
     """Check if the uploaded file has a valid extension."""
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def download_model_if_needed():
-    """Download the model if it doesn't exist locally."""
-    if not os.path.exists(MODEL_PATH):
-        logger.info("Downloading model from Google Drive...")
-        url = "https://drive.google.com/uc?id=1w60Z7vMYKSqWhJZQefF8ZqXs6Cv3z90p"
-        gdown.download(url, MODEL_PATH, quiet=False)
-        logger.info("Model downloaded successfully!")
-    else:
-        logger.info("Model already exists locally.")
-
-def convert_to_tflite():
-    """Convert TensorFlow model to TensorFlow Lite for memory efficiency."""
-    if not os.path.exists(TFLITE_PATH):
-        logger.info("Converting model to TensorFlow Lite...")
-        try:
-            # Load the original model
-            model = tf.keras.models.load_model(MODEL_PATH, compile=False)
-            
-            # Convert to TensorFlow Lite
-            converter = tf.lite.TFLiteConverter.from_keras_model(model)
-            tflite_model = converter.convert()
-            
-            # Save the TFLite model
-            with open(TFLITE_PATH, 'wb') as f:
-                f.write(tflite_model)
-                
-            logger.info("Model converted successfully!")
-            
-            # Clear the original model from memory
-            del model
-            import gc
-            gc.collect()
-            
-        except Exception as e:
-            logger.error(f"Error converting model: {e}")
-
-# Global variables for TFLite model
-interpreter = None
-input_details = None
-output_details = None
-
 def load_model():
-    """Load the TensorFlow Lite model."""
-    global interpreter, input_details, output_details
-    
+    """Load the TensorFlow Keras model."""
+    global model
     try:
-        # Ensure model is downloaded and converted
-        download_model_if_needed()
-        convert_to_tflite()
-        
-        # Load the TFLite model
-        interpreter = tf.lite.Interpreter(model_path=TFLITE_PATH)
-        interpreter.allocate_tensors()
-        
-        # Get input and output details
-        input_details = interpreter.get_input_details()
-        output_details = interpreter.get_output_details()
-        
-        logger.info("✅ TFLite model loaded successfully!")
+        if not os.path.exists(MODEL_PATH):
+            raise FileNotFoundError(f"Model file not found at {MODEL_PATH}. Please upload the model before deployment.")
+
+        model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+        logger.info("✅ Model loaded successfully!")
         return True
     except Exception as e:
-        logger.error(f"❌ Error loading TFLite model: {e}")
+        logger.error(f"❌ Error loading model: {e}")
         return False
 
 def preprocess_image(image_path):
@@ -120,18 +66,13 @@ def preprocess_image(image_path):
         logger.error(f"❌ Error preprocessing image: {e}")
         return None
 
-def predict_with_tflite(img_array):
-    """Make predictions using the TFLite model."""
-    if interpreter is None:
-        return None
-    
+def predict_with_model(img_array):
+    """Make predictions using the Keras model."""
     try:
-        interpreter.set_tensor(input_details[0]['index'], img_array)
-        interpreter.invoke()
-        predictions = interpreter.get_tensor(output_details[0]['index'])[0]
+        predictions = model.predict(img_array)[0]  # Get first batch's prediction
         return predictions
     except Exception as e:
-        logger.error(f"Error during prediction: {e}")
+        logger.error(f"❌ Error during prediction: {e}")
         return None
 
 @app.route("/", methods=["GET"])
@@ -161,8 +102,8 @@ def predict():
     if img_array is None:
         return jsonify({"error": "Error processing image"}), 400
 
-    # Predict using the TFLite model
-    predictions = predict_with_tflite(img_array)
+    # Predict using the model
+    predictions = predict_with_model(img_array)
     
     if predictions is not None:
         class_index = np.argmax(predictions)
@@ -193,6 +134,4 @@ port = int(os.environ.get("PORT", 5000))
 logger.info(f"Starting app on port {port}")
 
 if __name__ == "__main__":
-    # port = int(os.environ.get("PORT", 5000))
-    port = 5000
     app.run(host="0.0.0.0", port=port)
