@@ -4,7 +4,6 @@ import numpy as np
 from PIL import Image
 import os
 import logging
-import requests
 from flask_cors import CORS
 
 # Initialize Flask app
@@ -14,10 +13,8 @@ CORS(app)  # Enable CORS for all routes
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 
-# Google Drive File ID & Model Path
-GDRIVE_FILE_ID = "1w60Z7vMYKSqWhJZQefF8ZqXs6Cv3z90p"
-MODEL_PATH = "/tmp/end.h5"  # Use /tmp in Render to store temporary files
-
+# Model path (Render clones the repo, so the model will be present)
+MODEL_PATH = "./DenseNet121.h5"
 UPLOAD_FOLDER = "static/uploads/"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
@@ -39,30 +36,8 @@ CLASS_LABELS = [
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# Function to download model from Google Drive
-def download_model():
-    if os.path.exists(MODEL_PATH):
-        logging.info("✅ Model already exists, skipping download.")
-        return
-    
-    logging.info("⬇️ Downloading model from Google Drive...")
-    
-    try:
-        GDRIVE_URL = f"https://drive.google.com/uc?id={GDRIVE_FILE_ID}&export=download"
-        response = requests.get(GDRIVE_URL, stream=True)
-        response.raise_for_status()  # Raise error for bad response
-        
-        with open(MODEL_PATH, "wb") as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-        
-        logging.info("✅ Model downloaded successfully!")
-    except Exception as e:
-        logging.error(f"❌ Error downloading model: {e}")
-
-# Load the model efficiently
+# Load the model
 def load_model():
-    download_model()  # Ensure model is downloaded before loading
     try:
         model = tf.keras.models.load_model(MODEL_PATH, compile=False)
         logging.info("✅ Model loaded successfully!")
@@ -71,7 +46,7 @@ def load_model():
         logging.error(f"❌ Error loading model: {e}")
         return None
 
-# Load the model globally
+# Load model globally
 model = load_model()
 
 def preprocess_image(image_path):
@@ -115,5 +90,5 @@ def predict():
         return jsonify({"error": "Model not loaded properly"}), 500
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))  # Default to 10000 if PORT is not set
+    port = int(os.environ.get("PORT", 10000))  # Render assigns a port dynamically
     app.run(host="0.0.0.0", port=port)
