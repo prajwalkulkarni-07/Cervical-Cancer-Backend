@@ -28,6 +28,7 @@ oauthlib==3.2.2
 opt_einsum==3.4.0
 packaging==24.2
 pillow==11.1.0
+pip>=25.0.1
 protobuf==4.25.6
 pyasn1==0.6.1
 pyasn1_modules==0.4.1
